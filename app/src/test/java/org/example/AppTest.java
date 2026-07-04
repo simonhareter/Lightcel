@@ -6,9 +6,10 @@ package org.example;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-class AppTest {
-    @Test void appHasAGreeting() {
-        App classUnderTest = new App();
+class LightcelTest {
+    @Test
+    void appHasAGreeting() {
+        Lightcel classUnderTest = new Lightcel();
         assertNotNull(classUnderTest.getGreeting(), "app should have a greeting");
     }
 }

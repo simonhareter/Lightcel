@@ -4,53 +4,100 @@
 package org.example;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class Lightcel {
-    private Table<String> table;
+    private final Parser parser;
+    private final Table table;
+    public final String VERSION = "0.0.1";
 
-    public Lightcel() {
-        this.table = new Table<>("Numbers");
+    public Lightcel(Parser parser, Table table) {
+        this.parser = parser;
+        this.table = table;
     }
 
-    void main() {
-        parseFile();
-        printTable();
-    }
+    public void start(String[] args) {
+        // System.out.println(System.getProperty("user.dir"));
 
-    void parseFile() {
-        String file = "/home/rain/programming/java/Lightcel/app/src/main/resources/input.csv";
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-            String line;
-            int row = 0, col = 0;
-            while ((line = br.readLine()) != null) {
-                IO.println(line);
-                String[] elements = line.split(",");
-                for (String element : elements) {
-                    if (element.startsWith("=SUM(")) {
-                        
-                    } else {
-                        table.setCell(row, col, element);
-                        col++;
-                        IO.print(element + " ");
-                    }
-                }
-                row++;
-                col = 0;
-                IO.println();
-            }
+        if (args[0].equals("-v") || args[0].equals("--version")) {
+            IO.println("lightcel version " + VERSION);
+            return;
+        }
 
-        } catch (FileNotFoundException fnfe) {
-            fnfe.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (args[0].equals("-h") || args[0].equals("--help")) {
+            IO.println("usage: lightcel [-v | --version] [-h | --help]  <command> [<args>]\n");
+            IO.println("How to use Lightcel:\n");
+            IO.println("commands");
+            IO.println("   parse   takes input.csv and produces output.csv with excel functionality");
+            return;
+        }
+
+        if (args[0].equals("parse") && (args[1].equals("-h") || args[1].equals("--help"))) {
+            IO.println("usage: lightcel parse [<arg.csv>]\n");
+            return;
+        }
+
+        if (args.length != 1) {
+            IO.println("usage: lightcel [-v | --version] [-h | --help] <command> [<args>]\n");
+            return;
+        }
+
+        if (args[0].equals("parse") && args[1].endsWith(".csv")) {
+            String inputFile = args[1];
+            parser.parseInputFile(inputFile);
+            parser.executeFormulas();
+            printTable();
+            createOutputFile();
+            
+        } else {
+            IO.println("lightcel: '" + args[0] + "' is not a lightcel command. See 'lightcel --help'.");
         }
     }
 
     void printTable() {
-        for(int i = 0; i < Table.)
+        IO.println("Printing Table Structure...\n");
+
+        for (int row = 0; row <= table.getMaxInsertedRow(); row++) {
+            for (int col = 0; col <= table.getMaxInsertedCol(); col++) {
+                if (table.getCell(row, col) == null) {
+                    IO.print("  ");
+                } else {
+                    IO.print(table.getCell(row, col).getValue() + "(" + table.getCell(row, col).getCellType() + ") ");
+                }
+            }
+            if (row <= 2) {
+                IO.println();
+            }
+        }
+
+        IO.println("-------------------------------");
     }
 
+    void createOutputFile() {
+        File output = new File("/home/rain/programming/java/Lightcel/out/output.csv");
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(output))) {
+            String line = "";
+            for (int row = 0; row <= table.getMaxInsertedRow(); row++) {
+                for (int col = 0; col <= table.getMaxInsertedCol(); col++) {
+                    if (table.getCell(row, col) == null) {
+                        line += ",";
+                    } else {
+                        line += table.getCell(row, col).getValue() + ",";
+                    }
+                }
+                bw.write(line);
+                bw.newLine();
+                line = "";
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

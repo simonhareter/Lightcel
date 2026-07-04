@@ -1,0 +1,13 @@
+Client Workflow:
+run "lightcel <input.csv file>" -> output.csv gets created with excel behavior
+
+Lightcel Workflow:
+
+First Step: run program and print out input.csv row by row
+Second Step: program the engine that parses input.csv
+
+Classes: 
+    Table
+    Row
+    Column
+    Cell
