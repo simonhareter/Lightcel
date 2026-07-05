@@ -1,42 +1,10 @@
 package org.example;
 
 public class Parser {
+    private Table table;
 
-    void parseInputFile(String file) {
-        Path fp = Paths.get(file).toAbsolutePath().normalize();
-        IO.println("Parsing input.csv...\n");
-        try (BufferedReader br = Files.newBufferedReader(fp)) {
-            String line;
-            int row = 0;
-            int col = 0;
-            while ((line = br.readLine()) != null) {
-                String[] elements = line.split(",");
-
-                for (String element : elements) {
-                    if (element != "") {
-                        table.setCell(row, col, element, CellType.getTypeFromString(element));
-                        if (row > table.getMaxInsertedRow()) {
-                            table.setMaxInsertedRow(row);
-                        }
-                        if (col > table.getMaxInsertedCol()) {
-                            table.setMaxInsertedCol(col);
-                        }
-                    }
-                    col++;
-                }
-                row++;
-                col = 0;
-            }
-
-            IO.println("Max inserted row = " + table.getMaxInsertedRow());
-            IO.println("Max inserted col = " + table.getMaxInsertedCol());
-            IO.println("-------------------------------");
-
-        } catch (FileNotFoundException fnfe) {
-            fnfe.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public Parser(Table table) {
+        this.table = table;
     }
 
     void executeFormulas() {

@@ -12,13 +12,13 @@ public enum CellType {
             return EMPTY;
         } else if (isNumber(value)) {
             return NUMBER;
-        } else if (value.equalsIgnoreCase("TRUE") || value.equalsIgnoreCase("FALSE")) {
+        } else if (value.equals("TRUE") || value.equals("FALSE")) {
             return BOOLEAN;
         } else if (value.startsWith("=")) {
             if (!value.endsWith(")")) {
                 return STRING;
             }
-            
+
             return FORMULA;
         } else {
             return STRING;

@@ -3,28 +3,37 @@
  */
 package org.example;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 public class Lightcel {
-    private final Parser parser;
+    private final CsvReader csvr;
     private final Table table;
+    private final Tokenizer tokenizer;
+    private final Parser parser;
+    private final Evaluator evaluator;
+
     public final String VERSION = "0.0.1";
 
-    public Lightcel(Parser parser, Table table) {
-        this.parser = parser;
+    public Lightcel(CsvReader csvr, Table table, Tokenizer tokenizer, Parser parser, Evaluator evaluator) {
+        this.csvr = csvr;
         this.table = table;
+        this.tokenizer = tokenizer;
+        this.parser = parser;
+        this.evaluator = evaluator;
     }
 
     public void start(String[] args) {
         // System.out.println(System.getProperty("user.dir"));
+
+        if (args.length == 0 || args.length > 2) {
+            IO.println("usage: lightcel [-v | --version] [-h | --help] <command> [<args>]\n");
+            return;
+        }
 
         if (args[0].equals("-v") || args[0].equals("--version")) {
             IO.println("lightcel version " + VERSION);
@@ -44,20 +53,68 @@ public class Lightcel {
             return;
         }
 
-        if (args.length != 1) {
-            IO.println("usage: lightcel [-v | --version] [-h | --help] <command> [<args>]\n");
-            return;
-        }
-
         if (args[0].equals("parse") && args[1].endsWith(".csv")) {
             String inputFile = args[1];
-            parser.parseInputFile(inputFile);
-            parser.executeFormulas();
+            csvr.importCsv(inputFile);
             printTable();
             createOutputFile();
-            
+            List<Token> result1 = tokenizer.tokenize("=sum(A1,A2)");
+            List<Token> result2 = tokenizer.tokenize("=AVERAGE(A1:C1)");
+
         } else {
             IO.println("lightcel: '" + args[0] + "' is not a lightcel command. See 'lightcel --help'.");
+        }
+    }
+
+    void createOutputFile() {
+        Path path = Paths.get("output.csv");
+        try (BufferedWriter bw = Files.newBufferedWriter(path, StandardOpenOption.CREATE)) {
+            String line = "";
+
+            for (int row = 0; row <= table.getMaxInsertedRow(); row++) {
+                for (int col = 0; col <= table.getMaxInsertedCol(); col++) {
+                    Cell cell = table.getCell(row, col);
+                    if (cell != null) {
+                        CellType type = cell.getCellType();
+
+                        String value = "";
+                        if (cell.getValue() != null) {
+                            value = cell.getValue().toString();
+                        }
+
+                        switch (type) {
+                            case EMPTY -> line += ",";
+                            case BOOLEAN -> {
+                                line += value.toUpperCase() + ",";
+                            }
+                            case STRING, NUMBER -> line += value + ",";
+                            case FORMULA -> {
+                                line += "is form,";
+                                tokenizer.tokenize(value);
+                            }
+                        }
+                    }
+                }
+                bw.write(line);
+                bw.newLine();
+                line = "";
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void execute() {
+        for (int row = 0; row <= table.getMaxInsertedRow(); row++) {
+            for (int col = 0; col <= table.getMaxInsertedCol(); col++) {
+                Cell cell = table.getCell(row, col);
+                if (cell != null) {
+                    if (cell.getCellType() == CellType.FORMULA) {
+                        String formula = cell.getValue().toString();
+
+                    }
+                }
+            }
         }
     }
 
@@ -78,26 +135,5 @@ public class Lightcel {
         }
 
         IO.println("-------------------------------");
-    }
-
-    void createOutputFile() {
-        File output = new File("/home/rain/programming/java/Lightcel/out/output.csv");
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(output))) {
-            String line = "";
-            for (int row = 0; row <= table.getMaxInsertedRow(); row++) {
-                for (int col = 0; col <= table.getMaxInsertedCol(); col++) {
-                    if (table.getCell(row, col) == null) {
-                        line += ",";
-                    } else {
-                        line += table.getCell(row, col).getValue() + ",";
-                    }
-                }
-                bw.write(line);
-                bw.newLine();
-                line = "";
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 }
