@@ -2,18 +2,20 @@ package org.example;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Tokenizer {
     private String formula;
     private int idx;
-    boolean startedWithEquals = false,;
 
-    void init(String formula) {
+    private void init(String formula) {
         this.formula = formula;
-        idx = 0;
+        this.idx = 0;
     }
 
-    List<Token> tokenize(String formula) {
+    public List<Token> tokenize(String formula) {
+        init(formula);
         List<Token> tokens = new ArrayList<Token>();
 
         while (hasNextToken()) {
@@ -24,49 +26,124 @@ public class Tokenizer {
         return tokens;
     }
 
-    Token getNextToken() {
-        Token token;
-        String value;
-        TokenType type = null;
+    private boolean hasNextToken() {
+        return idx < formula.length();
+    }
 
-        final String string = this.formula.substring(this.idx);
+    private Token getNextToken() {
+        Token token = new Token();
 
-        if(string.charAt(idx) == '=' && this.idx == 0) {
-            startedWithEquals = true;
-            value = "=";
-            idx++;
-            token = new Token(value, TokenType.EQUALS);
-            return token;
-        } 
+        char c = this.formula.charAt(this.idx);
 
-        if(startedWithEquals) {
-            for(int i = 0; i < string.length(); i++) {
-                if(string.charAt(i) == '(') {
-                    value = string.substring(0, i + 1);
-                    idx += i + 1;
-                    token = new Token(value, TokenType.FUNCTION_NAME);
-                    return token;
+        switch (c) {
+            // Delimiters ,:() and MATH_OPERATORS +-*/
+            case '=' -> token.fillToken("=", TokenType.EQUALS);
+            case '(' -> token.fillToken("(", TokenType.OPEN_PARENTHESES);
+            case ')' -> token.fillToken(")", TokenType.CLOSING_PARENTHESES);
+            case ',' -> token.fillToken(",", TokenType.COMMA);
+            case ':' -> token.fillToken(":", TokenType.COLON);
+            case '+' -> token.fillToken("+", TokenType.MATH_OPERATOR);
+            case '-' -> token.fillToken("-", TokenType.MATH_OPERATOR);
+            case '*' -> token.fillToken("*", TokenType.MATH_OPERATOR);
+            case '/' -> token.fillToken("/", TokenType.MATH_OPERATOR);
+            case '^' -> token.fillToken("^", TokenType.MATH_OPERATOR);
+            case '<' -> token.fillToken("<", TokenType.COMPARISON_OPERATOR);
+            case '>' -> token.fillToken(">", TokenType.COMPARISON_OPERATOR);
+            case '&' -> token.fillToken("&", TokenType.CONCATENATION_OPERATOR);
+            default -> {
+                StringBuilder sb = new StringBuilder();
+                boolean startedWithQuote = false, endedWithQuote = false;
+
+                char start = formula.charAt(this.idx);
+
+                // Check for STRINGS
+                if (start == '"') {
+                    if (!startedWithQuote) {
+                        startedWithQuote = true;
+                        this.idx++;
+                    }
+
+                    while (this.idx < formula.length()) {
+                        c = formula.charAt(this.idx);
+
+                        if (startedWithQuote) {
+                            if (c == '"' && this.idx + 1 < formula.length() && formula.charAt(this.idx + 1) == '"') {
+                                sb.append('"');
+                                this.idx++;
+                            } else if (c == '"') {
+                                endedWithQuote = true;
+                                this.idx++;
+                                break;
+                            } else {
+                                sb.append(c);
+                            }
+                        }
+
+                        this.idx++;
+                    }
                 }
+
+                // Check for IDENTIFIERS, CELLS or NUMBERS
+                if (Character.isLetterOrDigit(start)) {
+                    while (this.idx < formula.length()) {
+                        c = formula.charAt(this.idx);
+                        sb.append(c);
+
+                        if (this.idx + 1 < formula.length() && formula.charAt(this.idx + 1) == '.') {
+                            this.idx++;
+                            sb.append(formula.charAt(this.idx));
+                        }
+
+                        if (this.idx + 1 < formula.length()
+                                && !Character.isLetterOrDigit(formula.charAt(this.idx + 1))) {
+                            this.idx++;
+                            break;
+                        }
+                        this.idx++;
+                    }
+                }
+
+                TokenType type = classify(sb.toString(), startedWithQuote, endedWithQuote);
+                token.fillToken(sb.toString(), type);
+                return token;
             }
-            startedWithEquals = false;
         }
-
-        if(string.charAt(idx) == '(') {
-            
-        }
-
-        // CELL
-        // [A-Za-z][0-9]+
-        formula.split()
-
-        // FUNCTION
-        // [A-Za-z]+
-
-        throw new RuntimeException("Unexpected Token!");
+        this.idx++;
+        return token;
     }
 
-    boolean hasNextToken() {
-        return idx < formula.length() - 1;
+    private TokenType classify(String string, boolean startedWithQuote, boolean endedWithQuote) {
+        TokenType type;
+
+        final Pattern identifier = Pattern.compile("[A-Za-z]+", Pattern.CASE_INSENSITIVE);
+        final Matcher matcherIdentifier = identifier.matcher(string);
+        final Pattern cell = Pattern.compile("[A-Za-z][0-9]+", Pattern.CASE_INSENSITIVE);
+        final Matcher matcherCell = cell.matcher(string);
+        final Pattern number = Pattern.compile("([+-]?(?=\\.\\d|\\d)(?:\\d+)?(?:\\.?\\d*))(?:[Ee]([+-]?\\d+))?",
+                Pattern.CASE_INSENSITIVE);
+        final Matcher matcherNumber = number.matcher(string);
+
+        if (matcherIdentifier.matches()) {
+            type = TokenType.IDENTIFIER;
+        } else if (matcherCell.matches()) {
+            type = TokenType.CELL;
+        } else if (matcherNumber.matches()) {
+            type = TokenType.NUMBER;
+        } else if (startedWithQuote && endedWithQuote && string.length() == 0) {
+            type = TokenType.EMPTY_STRING;
+        } else if (startedWithQuote && !endedWithQuote) {
+            type = TokenType.ERROR_UNTERMINATED_STRING;
+        } else {
+            type = TokenType.STRING;
+        }
+        return type;
     }
 
+    public void printTokenList(List<Token> list) {
+        IO.println("Tokenize Result: ");
+        for (Token tok : list) {
+            IO.println(tok.toString());
+        }
+        IO.println("-------------------------------");
+    }
 }

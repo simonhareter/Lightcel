@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.List;
 
 public class Lightcel {
     private final CsvReader csvr;
@@ -57,9 +58,11 @@ public class Lightcel {
             String inputFile = args[1];
             csvr.importCsv(inputFile);
             printTable();
-            createOutputFile();
+            // createOutputFile();
             List<Token> result1 = tokenizer.tokenize("=sum(A1,A2)");
             List<Token> result2 = tokenizer.tokenize("=AVERAGE(A1:C1)");
+            tokenizer.printTokenList(result1);
+            tokenizer.printTokenList(result2);
 
         } else {
             IO.println("lightcel: '" + args[0] + "' is not a lightcel command. See 'lightcel --help'.");

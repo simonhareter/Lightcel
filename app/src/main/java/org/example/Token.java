@@ -4,6 +4,10 @@ public class Token {
     private TokenType type;
     private String value;
 
+    public Token() {
+
+    }
+
     public Token(String value, TokenType type) {
         this.value = value;
         this.type = type;
@@ -11,6 +15,15 @@ public class Token {
 
     @Override
     public String toString() {
-        return "Token: Value = " + value + " , " + "Type = " + type;
+        StringBuilder sb = new StringBuilder();
+        sb.append("Token:\n");
+        sb.append("  Type: " + this.type + "\n");
+        sb.append("  Value: " + this.value);
+        return sb.toString();
+    }
+
+    public void fillToken(String value, TokenType type) {
+        this.value = value;
+        this.type = type;
     }
 }

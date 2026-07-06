@@ -1,4 +1,10 @@
-import org.example.*;
+import org.example.CsvReader;
+import org.example.Evaluator;
+import org.example.Lightcel;
+import org.example.Parser;
+import org.example.Table;
+import org.example.Token;
+import org.example.Tokenizer;
 
 /**
  * Entry point of Lightcel
@@ -6,8 +12,13 @@ import org.example.*;
  * @param args command-line arguments passed to Lightcel
  */
 void main(String[] args) {
-    Lightcel lightcel = initializeLightcel();
-    lightcel.start(args);
+    // Lightcel lightcel = initializeLightcel();
+    // lightcel.start(args);
+
+    Tokenizer tokenizer = new Tokenizer();
+    String input = "=2.5032^3";
+    List<Token> tokens = tokenizer.tokenize(input);
+    tokenizer.printTokenList(tokens);
 }
 
 /**

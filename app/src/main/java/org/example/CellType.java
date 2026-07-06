@@ -15,10 +15,6 @@ public enum CellType {
         } else if (value.equals("TRUE") || value.equals("FALSE")) {
             return BOOLEAN;
         } else if (value.startsWith("=")) {
-            if (!value.endsWith(")")) {
-                return STRING;
-            }
-
             return FORMULA;
         } else {
             return STRING;
