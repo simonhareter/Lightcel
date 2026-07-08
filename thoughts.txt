@@ -3,11 +3,33 @@ run "lightcel <input.csv file>" -> output.csv gets created with excel behavior
 
 Lightcel Workflow:
 
-First Step: run program and print out input.csv row by row
-Second Step: program the engine that parses input.csv
+1) CsvReader takes input.csv and fills table with cell data.
+2) Lightcel creates output.csv
+        a) Every cell that is not a formula: Just write its value to output.csv
+        b) If cell is formula: {
+            Tokenize the string into tokens.
+            Parse token by token and create an AST representation of the formula
+            Evaluate said AST and writer result into output.csv
+        }
 
-Classes: 
-    Table
-    Row
-    Column
-    Cell
+
+
+Parsing Example:
+
+x = 2 + 3 * 2;
+
+BIN_EXP(+)
+    NUM_LITERAL(2)
+    BIN_EXP(*)
+        NUM_LITERAL(3)
+        NUM_LITERAL(2)
+
+
+=SUM(A1:A3)
+
+FUNC_EXP(SUM)
+    RANGE_EXP(A1:A3)
+        CELL A1
+        CELL A2
+        CELL A3
+ 

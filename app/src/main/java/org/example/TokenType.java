@@ -2,6 +2,7 @@ package org.example;
 
 public enum TokenType {
     EQUALS,
+    FORMULA_START,
     OPEN_PARENTHESES,
     CLOSING_PARENTHESES,
     COMMA,
@@ -15,5 +16,6 @@ public enum TokenType {
     COMPARISON_OPERATOR,
     LOGICAL_OPERATOR,
     CONCATENATION_OPERATOR,
-    NUMBER;
+    NUMBER,
+    EOF;
 }

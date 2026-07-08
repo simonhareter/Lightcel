@@ -37,7 +37,13 @@ public class Tokenizer {
 
         switch (c) {
             // Delimiters ,:() and MATH_OPERATORS +-*/
-            case '=' -> token.fillToken("=", TokenType.EQUALS);
+            case '=' -> {
+                if (this.idx != 0) {
+                    token.fillToken("=", TokenType.EQUALS);
+                } else {
+                    token.fillToken("=", TokenType.FORMULA_START);
+                }
+            }
             case '(' -> token.fillToken("(", TokenType.OPEN_PARENTHESES);
             case ')' -> token.fillToken(")", TokenType.CLOSING_PARENTHESES);
             case ',' -> token.fillToken(",", TokenType.COMMA);
@@ -47,8 +53,25 @@ public class Tokenizer {
             case '*' -> token.fillToken("*", TokenType.MATH_OPERATOR);
             case '/' -> token.fillToken("/", TokenType.MATH_OPERATOR);
             case '^' -> token.fillToken("^", TokenType.MATH_OPERATOR);
-            case '<' -> token.fillToken("<", TokenType.COMPARISON_OPERATOR);
-            case '>' -> token.fillToken(">", TokenType.COMPARISON_OPERATOR);
+            case '<' -> {
+                if (this.idx + 1 < this.formula.length() && this.formula.charAt(this.idx + 1) == '=') {
+                    token.fillToken("<=", TokenType.COMPARISON_OPERATOR);
+                    this.idx++;
+                } else if (this.idx + 1 < this.formula.length() && this.formula.charAt(this.idx + 1) == '>') {
+                    token.fillToken("<>", TokenType.COMPARISON_OPERATOR);
+                    this.idx++;
+                } else {
+                    token.fillToken("<", TokenType.COMPARISON_OPERATOR);
+                }
+            }
+            case '>' -> {
+                if (this.idx + 1 < this.formula.length() && this.formula.charAt(this.idx + 1) == '=') {
+                    token.fillToken(">=", TokenType.COMPARISON_OPERATOR);
+                    this.idx++;
+                } else {
+                    token.fillToken(">", TokenType.COMPARISON_OPERATOR);
+                }
+            }
             case '&' -> token.fillToken("&", TokenType.CONCATENATION_OPERATOR);
             default -> {
                 StringBuilder sb = new StringBuilder();

@@ -1,54 +1,113 @@
 package org.example;
 
+import java.util.ArrayList;
+import java.util.List;
+import org.example.expressions.CellReference;
+import org.example.expressions.Expression;
+import org.example.expressions.FunctionExpression;
+import org.example.expressions.RangeExpression;
+import org.example.util.FunctionType;
+import org.example.util.exceptions.ParseException;
+
 public class Parser {
     private Table table;
+    private List<Token> tokens;
+    private int currIdx;
 
     public Parser(Table table) {
         this.table = table;
     }
 
-    void executeFormulas() {
-        // SUM AVERAGE COUNT MIN MAX
-        // detect circular definitions
-        // only parse numbers, ignore string
+    private void init(List<Token> tokens) {
+        this.tokens = tokens;
+        this.currIdx = 0;
+    }
 
-        IO.println("Executing formulas...");
+    public Expression parse(List<Token> tokens) {
+        init(tokens);
+        consume(TokenType.FORMULA_START);
+        return parseExpression();
+    }
 
-        for (int row = 0; row <= table.getMaxInsertedRow(); row++) {
-            for (int col = 0; col <= table.getMaxInsertedCol(); col++) {
-                if (table.getCell(row, col) != null) {
-                    if (table.getCell(row, col).getCellType() == CellType.FORMULA) {
-                        FunctionType type = extractFunctionType(row, col);
-                        String[] cells = extractCells();
-                    }
-                }
+    private Expression parseExpression() {
+        Token token = peek();
+
+        return switch (token.getType()) {
+            case IDENTIFIER -> parseFunction();
+            case CELL -> parseCell(token.getValue());
+            default -> parseExpression();
+        };
+    }
+
+    private Expression parseFunction() {
+        Token token = peek();
+
+        consume(TokenType.IDENTIFIER);
+        FunctionType fnType = FunctionType.findByName(token.getValue());
+        consume(TokenType.OPEN_PARENTHESES);
+
+        List<Expression> arguments = new ArrayList<>();
+
+        while (!match(TokenType.CLOSING_PARENTHESES)) {
+            arguments.add(parseExpression());
+
+            if(!match(TokenType.COMMA)) {
+                break;
             }
         }
 
-        IO.println();
-        IO.println("-------------------------------");
+        consume(TokenType.CLOSING_PARENTHESES);
+        return new FunctionExpression(fnType, arguments);
     }
 
-    FunctionType extractFunctionType(int row, int col) {
-        int startIdx = 1, openingBracketIdx = 0;
-        String value = (String) table.getCell(row, col).getValue();
+    private CellReference parseCell(String cell) {
+        String[] result = cell.splitWithDelimiters("[0-9]+", 2);
+        String rowS = result[1];
+        String colS = result[0];
 
-        for (int i = 0; i < value.length(); i++) {
-            if (value.charAt(i) == '(') {
-                openingBracketIdx = i;
-            }
+        int row = Integer.parseInt(rowS);
+        int col = 0;
+
+        for (char c : colS.toCharArray()) {
+            col *= 26 + (c - 'A' + 1);
         }
 
-        // Starting at idx 1 since a function starts with =
-        // Example: =SUM(A1,A2);
-        String substr = value.substring(startIdx, openingBracketIdx);
-        return FunctionType.valueOf(substr);
+        return new CellReference(row, col - 1);
     }
 
-    // Extracts cells out of formulas.
-    // Examples: =SUM(A1,A3) -> [A1,A2]; =AVG(A1:A3) -> [A1,A2,A3];
-    String[] extractCells() {
-        return new String[10];
+    // looks at current token
+    private Token peek() {
+        return this.tokens.get(this.currIdx);
+    }
+
+    //
+    private void consume(TokenType expected) {
+        Token current = peek();
+        TokenType currentType = current.getType();
+
+        if (!currentType.equals(expected)) {
+            throw new ParseException("Expected: " + expected + " but found " + currentType);
+        }
+
+        this.currIdx++;
+    }
+
+    private boolean match(TokenType expected) {
+        Token current = peek();
+        TokenType currentType = current.getType();
+
+        return currentType.equals(expected);
+    }
+
+    private boolean isAtEnd() {
+        return this.currIdx == tokens.size() - 1;
+    }
+
+    private Token lookAhead() {
+        if (this.currIdx == this.tokens.size() - 1) {
+            return new Token("", TokenType.EOF);
+        }
+        return this.tokens.get(this.currIdx + 1);
     }
 
 }
