@@ -1,4 +1,4 @@
 package org.example.expressions;
 
-public abstract class Expression {
+public interface Expression {
 }

@@ -3,8 +3,10 @@ import org.example.Evaluator;
 import org.example.Lightcel;
 import org.example.Parser;
 import org.example.Table;
-
+import org.example.Token;
 import org.example.Tokenizer;
+import org.example.expressions.Expression;
+import org.example.expressions.FunctionExpression;
 
 /**
  * Entry point of Lightcel
@@ -12,8 +14,26 @@ import org.example.Tokenizer;
  * @param args command-line arguments passed to Lightcel
  */
 void main(String[] args) {
-    Lightcel lightcel = initializeLightcel();
-    lightcel.start(args);
+    // Lightcel lightcel = initializeLightcel();
+    // lightcel.start(args);
+
+    Table table = new Table();
+    Tokenizer tokenizer = new Tokenizer();
+    Parser parser = new Parser(table);
+
+    String s1 = "=SUM(A1,A2,A3)";
+    String s2 = "=AVERAGE(A3:B10)";
+
+    List<Token> tokens = tokenizer.tokenize(s2);
+    Expression e = parser.parse(tokens);
+
+    if (e instanceof FunctionExpression fe) {
+        IO.println(fe.getFunction());
+        List<Expression> es = fe.getArguments();
+        for (Expression exp : es) {
+            IO.println(exp.getClass().getSimpleName());
+        }
+    }
 }
 
 /**

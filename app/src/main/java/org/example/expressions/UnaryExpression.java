@@ -1,5 +1,5 @@
 package org.example.expressions;
 
-public class UnaryExpression extends Expression {
+public class UnaryExpression implements Expression {
 
 }

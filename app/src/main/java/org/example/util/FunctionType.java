@@ -17,8 +17,8 @@ public enum FunctionType {
     }
 
     public static boolean isFunctionType(String name) {
-        for(FunctionType type : values()) {
-            if(type.name().equalsIgnoreCase(name)) {
+        for (FunctionType type : values()) {
+            if (type.name().equalsIgnoreCase(name)) {
                 return true;
             }
         }

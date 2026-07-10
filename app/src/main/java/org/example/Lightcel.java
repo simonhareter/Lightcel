@@ -104,7 +104,6 @@ public class Lightcel {
         }
     }
 
-   
     void printTable() {
         IO.println("Printing Table Structure...\n");
 

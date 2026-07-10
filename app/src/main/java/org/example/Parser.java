@@ -1,11 +1,18 @@
 package org.example;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.example.expressions.CellReference;
+import org.example.expressions.ColumnReference;
 import org.example.expressions.Expression;
 import org.example.expressions.FunctionExpression;
+import org.example.expressions.NumberLiteral;
+import org.example.expressions.RangeBounds;
 import org.example.expressions.RangeExpression;
+import org.example.expressions.Reference;
+import org.example.expressions.RowReference;
+import org.example.expressions.StringLiteral;
 import org.example.util.FunctionType;
 import org.example.util.exceptions.ParseException;
 
@@ -31,11 +38,15 @@ public class Parser {
 
     private Expression parseExpression() {
         Token token = peek();
+        String value = token.getValue();
 
         return switch (token.getType()) {
             case IDENTIFIER -> parseFunction();
-            case CELL -> parseCell(token.getValue());
-            default -> parseExpression();
+            case CELL -> parseReference(value);
+            case COLON -> parseRange();
+            case NUMBER -> new NumberLiteral(Double.parseDouble(value));
+            case STRING -> new StringLiteral(value);
+            default -> throw new ParseException("Unknown tokentype");
         };
     }
 
@@ -49,30 +60,95 @@ public class Parser {
         List<Expression> arguments = new ArrayList<>();
 
         while (!match(TokenType.CLOSING_PARENTHESES)) {
+            TokenType tknType = peek().getType();
+
+            if (match(TokenType.COMMA)) {
+                consume(TokenType.COMMA);
+                continue;
+            }
+
+            // Check for range expression
+            Token lookAhead = lookAhead();
+            TokenType lAhType = lookAhead.getType();
+
+            if (!lAhType.equals(TokenType.EOF) && lAhType.equals(TokenType.COLON)) {
+                if (!isInvalidTokenType(TokenType.CELL, TokenType.NUMBER, TokenType.STRING)) {
+                    consume(tknType);
+                    continue;
+                }
+            }
+
             arguments.add(parseExpression());
 
-            if(!match(TokenType.COMMA)) {
+            if (isInvalidTokenType(TokenType.OPEN_PARENTHESES, TokenType.CLOSING_PARENTHESES)) {
                 break;
             }
+            consume(tknType);
         }
 
         consume(TokenType.CLOSING_PARENTHESES);
         return new FunctionExpression(fnType, arguments);
     }
 
-    private CellReference parseCell(String cell) {
-        String[] result = cell.splitWithDelimiters("[0-9]+", 2);
+    private RangeExpression parseRange() {
+        Token left = lookBack();
+        Token right = lookAhead();
+
+        Reference leftRef = parseReference(left.getValue());
+        Reference rightRef = parseReference(right.getValue());
+
+        return normalizeRange(leftRef, rightRef);
+    }
+
+    private RangeExpression normalizeRange(Reference left, Reference right) {
+        int leftMaxInsertedRowOrCol, rightMaxInsertedRowOrCol;
+
+        if (left instanceof RowReference) {
+            leftMaxInsertedRowOrCol = table.getMaxInsertedCol();
+        } else {
+            leftMaxInsertedRowOrCol = table.getMaxInsertedRow();
+        }
+
+        if (right instanceof RowReference) {
+            rightMaxInsertedRowOrCol = table.getMaxInsertedCol();
+        } else {
+            rightMaxInsertedRowOrCol = table.getMaxInsertedRow();
+        }
+
+        RangeBounds leftBounds = left.toBounds(leftMaxInsertedRowOrCol);
+        RangeBounds rightBounds = right.toBounds(rightMaxInsertedRowOrCol);
+
+        
+    }
+
+    private Reference parseReference(String input) {
+        if (input.matches("[0-9]+")) {
+            int row = Integer.parseInt(input);
+            return new RowReference(row);
+        }
+
+        if (input.matches("[A-Za-z]+")) {
+            int col = columnToIndex(input);
+            return new ColumnReference(col);
+        }
+
+        String[] result = input.splitWithDelimiters("[0-9]+", 2);
         String rowS = result[1];
         String colS = result[0];
 
         int row = Integer.parseInt(rowS);
-        int col = 0;
-
-        for (char c : colS.toCharArray()) {
-            col *= 26 + (c - 'A' + 1);
-        }
+        int col = columnToIndex(colS);
 
         return new CellReference(row, col - 1);
+    }
+
+    private int columnToIndex(String col) {
+        int result = 0;
+
+        for (char c : col.toUpperCase().toCharArray()) {
+            result *= 26 + (c - 'A' + 1);
+        }
+        return result;
     }
 
     // looks at current token
@@ -110,4 +186,14 @@ public class Parser {
         return this.tokens.get(this.currIdx + 1);
     }
 
+    private Token lookBack() {
+        if (this.currIdx == 0) {
+            return new Token("", TokenType.EOF);
+        }
+        return this.tokens.get(this.currIdx - 1);
+    }
+
+    private boolean isInvalidTokenType(TokenType... types) {
+        return Arrays.asList(types).stream().anyMatch(tokenType -> match(tokenType));
+    }
 }

@@ -1,5 +1,13 @@
 package org.example.expressions;
 
-public class NumberLiteral {
-    private int value;
+public class NumberLiteral implements Expression {
+    private double value;
+
+    public NumberLiteral(double value) {
+        this.value = value;
+    }
+
+    public double getValue() {
+        return value;
+    }
 }

@@ -2,7 +2,7 @@ package org.example.expressions;
 
 import org.example.Token;
 
-public class BinaryExpression extends Expression {
+public class BinaryExpression implements Expression {
     private final Token operator;
     private final Expression left;
     private final Expression right;

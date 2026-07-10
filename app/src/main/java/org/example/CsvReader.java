@@ -25,7 +25,7 @@ public class CsvReader {
                 String[] elements = line.split(",");
 
                 for (String element : elements) {
-                    fillTableCell(element, row, col);
+                    table.setCell(row, col, element, CellType.getTypeFromString(element));
                     col++;
                 }
                 row++;
@@ -40,16 +40,6 @@ public class CsvReader {
             fnfe.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-        }
-    }
-
-    void fillTableCell(String element, int row, int col) {
-        table.setCell(row, col, element, CellType.getTypeFromString(element));
-        if (row > table.getMaxInsertedRow()) {
-            table.setMaxInsertedRow(row);
-        }
-        if (col > table.getMaxInsertedCol()) {
-            table.setMaxInsertedCol(col);
         }
     }
 }
