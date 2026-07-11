@@ -4,9 +4,9 @@ import org.example.util.exceptions.InvalidReferenceException;
 import org.example.util.exceptions.TableFullException;
 
 public class Table {
-    public static final int MAX_ROW = 100_000;
-    public static final int MAX_COL = 10_000;
-    public static final long MAX_CELLS = 1_000_000;
+    public static final int MAX_ROW = 100_00;
+    public static final int MAX_COL = 10_0;
+    public static final long MAX_CELLS = MAX_ROW * MAX_COL;
 
     private int maxInsertedRow;
     private int maxInsertedCol;

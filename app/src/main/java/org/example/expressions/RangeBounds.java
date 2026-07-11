@@ -6,27 +6,27 @@ public class RangeBounds {
     private int startCol;
     private int endCol;
 
+    public RangeBounds(int startRow, int endRow, int startCol, int endCol) {
+        this.startRow = startRow;
+        this.endRow = endRow;
+        this.startCol = startCol;
+        this.endCol = endCol;
+    }
+
     public int getStartRow() {
-        return startRow;
+        return this.startRow;
     }
 
     public int getEndRow() {
-        return endRow;
+        return this.endRow;
     }
 
-    public RangeBounds(int startRow, int endRow, int startCol, int endCol) {
-		this.startRow = startRow;
-		this.endRow = endRow;
-		this.startCol = startCol;
-		this.endCol = endCol;
-	}
-
-	public int getStartCol() {
-        return startCol;
+    public int getStartCol() {
+        return this.startCol;
     }
 
     public int getEndCol() {
-        return endCol;
+        return this.endCol;
     }
 
     public void setStartRow(int startRow) {
@@ -43,5 +43,12 @@ public class RangeBounds {
 
     public void setEndCol(int endCol) {
         this.endCol = endCol;
+    }
+
+    @Override
+    public String toString() {
+        return "RangeBounds [startRow=" + this.startRow + ", endRow=" + this.endRow + ", startCol=" + this.startCol
+                + ", endCol="
+                + this.endCol + "]";
     }
 }

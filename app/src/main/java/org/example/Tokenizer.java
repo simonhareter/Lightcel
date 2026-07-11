@@ -27,7 +27,7 @@ public class Tokenizer {
     }
 
     private boolean hasNextToken() {
-        return idx < formula.length();
+        return this.idx < this.formula.length();
     }
 
     private Token getNextToken() {

@@ -12,4 +12,22 @@ public class BinaryExpression implements Expression {
         this.operator = operator;
         this.left = left;
     }
+
+    public Token getOperator() {
+        return operator;
+    }
+
+    public Expression getLeft() {
+        return left;
+    }
+
+    public Expression getRight() {
+        return right;
+    }
+
+    @Override
+    public String toString() {
+        return "(" + left + " " + operator + " " + right + ")";
+    }
+
 }

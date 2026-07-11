@@ -14,4 +14,8 @@ public class CellReference implements Reference {
         return new RangeBounds(this.row, this.row, this.column, this.column);
     }
 
+    @Override
+    public String toString() {
+        return "Cell(r=" + row + ", c=" + column + ")";
+    }
 }

@@ -9,4 +9,8 @@ public class RangeExpression implements Expression {
         this.end = end;
     }
 
+    @Override
+    public String toString() {
+        return "( " + this.start + " : " + this.end + " )";
+    }
 }

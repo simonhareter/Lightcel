@@ -8,6 +8,11 @@ public class NumberLiteral implements Expression {
     }
 
     public double getValue() {
-        return value;
+        return this.value;
+    }
+
+    @Override
+    public String toString() {
+        return String.valueOf(this.value);
     }
 }

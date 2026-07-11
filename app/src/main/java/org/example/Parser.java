@@ -7,12 +7,13 @@ import org.example.expressions.CellReference;
 import org.example.expressions.ColumnReference;
 import org.example.expressions.Expression;
 import org.example.expressions.FunctionExpression;
-import org.example.expressions.NumberLiteral;
+import org.example.expressions.PostfixExpression;
 import org.example.expressions.RangeBounds;
 import org.example.expressions.RangeExpression;
 import org.example.expressions.Reference;
 import org.example.expressions.RowReference;
 import org.example.expressions.StringLiteral;
+import org.example.expressions.UnaryExpression;
 import org.example.util.FunctionType;
 import org.example.util.exceptions.ParseException;
 
@@ -38,13 +39,14 @@ public class Parser {
 
     private Expression parseExpression() {
         Token token = peek();
+        TokenType type = token.getType();
         String value = token.getValue();
 
-        return switch (token.getType()) {
+        return switch (type) {
             case IDENTIFIER -> parseFunction();
             case CELL -> parseReference(value);
             case COLON -> parseRange();
-            case NUMBER -> new NumberLiteral(Double.parseDouble(value));
+            case NUMBER, MATH_OPERATOR -> parseNumber();
             case STRING -> new StringLiteral(value);
             default -> throw new ParseException("Unknown tokentype");
         };
@@ -72,15 +74,15 @@ public class Parser {
             TokenType lAhType = lookAhead.getType();
 
             if (!lAhType.equals(TokenType.EOF) && lAhType.equals(TokenType.COLON)) {
-                if (!isInvalidTokenType(TokenType.CELL, TokenType.NUMBER, TokenType.STRING)) {
-                    consume(tknType);
+                if (matchesAny(TokenType.CELL, TokenType.NUMBER, TokenType.STRING)) {
+                    consume(TokenType.CELL);
                     continue;
                 }
             }
 
             arguments.add(parseExpression());
 
-            if (isInvalidTokenType(TokenType.OPEN_PARENTHESES, TokenType.CLOSING_PARENTHESES)) {
+            if (matchesAny(TokenType.OPEN_PARENTHESES, TokenType.CLOSING_PARENTHESES)) {
                 break;
             }
             consume(tknType);
@@ -97,6 +99,8 @@ public class Parser {
         Reference leftRef = parseReference(left.getValue());
         Reference rightRef = parseReference(right.getValue());
 
+        consume(TokenType.COLON);
+        consume(TokenType.CELL);
         return normalizeRange(leftRef, rightRef);
     }
 
@@ -118,7 +122,15 @@ public class Parser {
         RangeBounds leftBounds = left.toBounds(leftMaxInsertedRowOrCol);
         RangeBounds rightBounds = right.toBounds(rightMaxInsertedRowOrCol);
 
-        
+        int leftCellRow = Math.min(leftBounds.getStartRow(), rightBounds.getStartRow());
+        int leftCellCol = Math.min(leftBounds.getStartCol(), rightBounds.getStartCol());
+        int rightCellRow = Math.max(leftBounds.getEndRow(), rightBounds.getEndRow());
+        int rightCellCol = Math.max(leftBounds.getEndCol(), rightBounds.getEndCol());
+
+        CellReference leftCell = new CellReference(leftCellRow, leftCellCol);
+        CellReference rightCell = new CellReference(rightCellRow, rightCellCol);
+
+        return new RangeExpression(leftCell, rightCell);
     }
 
     private Reference parseReference(String input) {
@@ -136,10 +148,16 @@ public class Parser {
         String rowS = result[1];
         String colS = result[0];
 
-        int row = Integer.parseInt(rowS);
+        int row = rowToIndex(rowS);
         int col = columnToIndex(colS);
 
-        return new CellReference(row, col - 1);
+        return new CellReference(row, col);
+    }
+
+    private int rowToIndex(String row) {
+        // table is 0-indexed. B2: (row = 1, col = 1)
+        int indexOffset = 1;
+        return Integer.parseInt(row) - indexOffset;
     }
 
     private int columnToIndex(String col) {
@@ -149,6 +167,59 @@ public class Parser {
             result *= 26 + (c - 'A' + 1);
         }
         return result;
+    }
+
+    private Expression parseNumber() {
+        Token token = peek();
+        TokenType type = token.getType();
+        String value = token.getValue();
+
+        if (isUnaryMathOperator(value)) {
+            parseUnary();
+        }
+
+        return null;
+    }
+
+    private UnaryExpression parseUnary() {
+        Token operator = peek();
+
+        consume(TokenType.MATH_OPERATOR);
+
+        if (!matchesAny(TokenType.NUMBER, TokenType.IDENTIFIER, TokenType.CELL)) {
+            throw new ParseException(
+                    "Invalid token type " + peek().getType() + " after MATH_OPERATOR " + operator.getValue());
+        }
+
+        Expression right = parseExpression();
+        return new UnaryExpression(operator, right);
+    }
+
+    private PostfixExpression parsePostfix() {
+        return null;
+    }
+
+    private boolean isUnaryMathOperator(String operator) {
+        if (!operator.equals("+") || !operator.equals("-")) {
+            return false;
+        }
+
+        Token left = lookBack();
+        Token right = lookAhead();
+
+        if (left.getType().equals(TokenType.OPEN_PARENTHESES)) {
+            return true;
+        }
+
+        if (left.getType().matches(TokenType.NUMBER, TokenType.CELL, TokenType.IDENTIFIER)) {
+            return false;
+        }
+
+        if (!right.getType().matches(TokenType.NUMBER, TokenType.CELL, TokenType.IDENTIFIER)) {
+            return false;
+        }
+
+        return true;
     }
 
     // looks at current token
@@ -193,7 +264,8 @@ public class Parser {
         return this.tokens.get(this.currIdx - 1);
     }
 
-    private boolean isInvalidTokenType(TokenType... types) {
+    private boolean matchesAny(TokenType... types) {
         return Arrays.asList(types).stream().anyMatch(tokenType -> match(tokenType));
     }
+
 }

@@ -13,6 +13,11 @@ public class RowReference implements Reference {
     }
 
     public int getRow() {
-        return row;
+        return this.row;
+    }
+
+    @Override
+    public String toString() {
+        return String.valueOf(this.row);
     }
 }

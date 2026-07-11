@@ -13,6 +13,11 @@ public class ColumnReference implements Reference {
     }
 
     public int getColumn() {
-        return column;
+        return this.column;
+    }
+
+    @Override
+    public String toString() {
+        return String.valueOf(this.column);
     }
 }

@@ -16,6 +16,16 @@ public enum TokenType {
     COMPARISON_OPERATOR,
     LOGICAL_OPERATOR,
     CONCATENATION_OPERATOR,
+    PERCENTAGE_OPERATOR,
     NUMBER,
     EOF;
+
+    public boolean matches(TokenType... types) {
+        for (TokenType type : types) {
+            if (this == type) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

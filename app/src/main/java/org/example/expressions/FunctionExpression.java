@@ -1,6 +1,7 @@
 package org.example.expressions;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import org.example.util.FunctionType;
 
 public class FunctionExpression implements Expression {
@@ -13,11 +14,16 @@ public class FunctionExpression implements Expression {
     }
 
     public FunctionType getFunction() {
-        return function;
+        return this.function;
     }
 
     public List<Expression> getArguments() {
-        return arguments;
+        return this.arguments;
     }
 
+    @Override
+    public String toString() {
+        return this.function + "( "
+                + this.arguments.stream().map(Expression::toString).collect(Collectors.joining(", ")) + " )";
+    }
 }

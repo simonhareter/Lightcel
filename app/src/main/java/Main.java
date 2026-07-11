@@ -23,8 +23,9 @@ void main(String[] args) {
 
     String s1 = "=SUM(A1,A2,A3)";
     String s2 = "=AVERAGE(A3:B10)";
+    String s3 = "=3+2*3";
 
-    List<Token> tokens = tokenizer.tokenize(s2);
+    List<Token> tokens = tokenizer.tokenize(s3);
     Expression e = parser.parse(tokens);
 
     if (e instanceof FunctionExpression fe) {
@@ -34,6 +35,8 @@ void main(String[] args) {
             IO.println(exp.getClass().getSimpleName());
         }
     }
+
+    IO.println(e.toString());
 }
 
 /**
