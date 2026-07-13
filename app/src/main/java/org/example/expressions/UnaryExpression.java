@@ -13,7 +13,7 @@ public class UnaryExpression implements Expression {
 
     @Override
     public String toString() {
-        return "( " + this.operator + this.right + " )";
+        return "( " + this.operator.getValue() + this.right + " )";
     }
 
     public Token getOperator() {

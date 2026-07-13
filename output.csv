@@ -1,3 +1,3 @@
 1.0,2.0,3.0,TRUE,5.0,FALSE,7.0,8.0,
 1.0,,3.0,4.0,false,6.0,7.0,8.0,
-=SUM(A1:A2),=SUM(b1:B2),=SUM(C1:c2),=SUM(D1:D2),=SUM(E1:E2),=SUM(F1:F2),=SUM(G1:G2),=SUM(H1:H2),
+SUM( ( Cell(r=0, c=0) : Cell(r=1, c=0) ) ),SUM( ( Cell(r=0, c=1) : Cell(r=1, c=1) ) ),SUM( ( Cell(r=0, c=2) : Cell(r=1, c=2) ) ),SUM( ( Cell(r=0, c=3) : Cell(r=1, c=3) ) ),SUM( ( Cell(r=0, c=4) : Cell(r=1, c=4) ) ),SUM( ( Cell(r=0, c=5) : Cell(r=1, c=5) ) ),SUM( ( Cell(r=0, c=6) : Cell(r=1, c=6) ) ),SUM( ( Cell(r=0, c=7) : Cell(r=1, c=7) ) ),

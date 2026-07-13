@@ -3,14 +3,14 @@ package org.example.expressions;
 import org.example.Token;
 
 public class BinaryExpression implements Expression {
-    private final Token operator;
     private final Expression left;
+    private final Token operator;
     private final Expression right;
 
-    public BinaryExpression(Expression right, Token operator, Expression left) {
-        this.right = right;
-        this.operator = operator;
+    public BinaryExpression(Expression left, Token operator, Expression right) {
         this.left = left;
+        this.operator = operator;
+        this.right = right;
     }
 
     public Token getOperator() {
@@ -27,7 +27,7 @@ public class BinaryExpression implements Expression {
 
     @Override
     public String toString() {
-        return "(" + left + " " + operator + " " + right + ")";
+        return "(" + this.left + " " + this.operator.getValue() + " " + this.right + ")";
     }
 
 }

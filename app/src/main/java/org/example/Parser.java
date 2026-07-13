@@ -3,10 +3,12 @@ package org.example;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.example.expressions.BinaryExpression;
 import org.example.expressions.CellReference;
 import org.example.expressions.ColumnReference;
 import org.example.expressions.Expression;
 import org.example.expressions.FunctionExpression;
+import org.example.expressions.NumberLiteral;
 import org.example.expressions.PostfixExpression;
 import org.example.expressions.RangeBounds;
 import org.example.expressions.RangeExpression;
@@ -31,26 +33,99 @@ public class Parser {
         this.currIdx = 0;
     }
 
+    // Entry ----------------------------------------------------
+
     public Expression parse(List<Token> tokens) {
         init(tokens);
         consume(TokenType.FORMULA_START);
-        return parseExpression();
+
+        Expression parseResult = parseExpression();
+
+        if (!isAtEnd()) {
+            throw new ParseException("Unexpected token: " + peek());
+        }
+
+        return parseResult;
     }
+
+    // Recursive Descent ----------------------------------------------------
 
     private Expression parseExpression() {
-        Token token = peek();
-        TokenType type = token.getType();
-        String value = token.getValue();
+        return parseAddition();
+    }
 
-        return switch (type) {
+    private Expression parseAddition() {
+        Expression left = parseMultiplication();
+
+        while (matchMathOperator("+") || matchMathOperator("-") || match(TokenType.CONCATENATION_OPERATOR)) {
+            Token operator = peek();
+
+            if (operator.getType().equals(TokenType.CONCATENATION_OPERATOR)) {
+                consume(TokenType.CONCATENATION_OPERATOR);
+            } else {
+                consume(TokenType.MATH_OPERATOR);
+            }
+
+            Expression right = parseMultiplication();
+            left = new BinaryExpression(left, operator, right);
+        }
+
+        return left;
+    }
+
+    private Expression parseMultiplication() {
+        Expression left = parseUnary();
+
+        while (matchMathOperator("*") || matchMathOperator("/") || matchMathOperator("^")) {
+            Token operator = peek();
+            consume(TokenType.MATH_OPERATOR);
+
+            Expression right = parseUnary();
+            left = new BinaryExpression(left, operator, right);
+        }
+
+        return left;
+    }
+
+    private Expression parseUnary() {
+        if (matchMathOperator("+") || matchMathOperator("-")) {
+            Token operator = peek();
+            consume(TokenType.MATH_OPERATOR);
+
+            Expression right = parseUnary();
+            return new UnaryExpression(operator, right);
+        }
+
+        return parsePostFix();
+    }
+
+    private Expression parsePostFix() {
+        Expression left = parseBase();
+
+        if (matchPostFixOperator()) {
+            Token operator = peek();
+            consume(TokenType.PERCENTAGE_OPERATOR);
+
+            left = new PostfixExpression(left, operator);
+        }
+
+        return left;
+    }
+
+    private Expression parseBase() {
+        Token token = peek();
+
+        return switch (token.getType()) {
             case IDENTIFIER -> parseFunction();
-            case CELL -> parseReference(value);
+            case CELL -> parseReference(token.getValue());
             case COLON -> parseRange();
-            case NUMBER, MATH_OPERATOR -> parseNumber();
-            case STRING -> new StringLiteral(value);
-            default -> throw new ParseException("Unknown tokentype");
+            case NUMBER -> parseNumberLiteral();
+            case STRING, EMPTY_STRING -> parseStringLiteral();
+            default -> throw new ParseException("Unexpected token");
         };
     }
+
+    // Function ----------------------------------------------------
 
     private Expression parseFunction() {
         Token token = peek();
@@ -62,8 +137,6 @@ public class Parser {
         List<Expression> arguments = new ArrayList<>();
 
         while (!match(TokenType.CLOSING_PARENTHESES)) {
-            TokenType tknType = peek().getType();
-
             if (match(TokenType.COMMA)) {
                 consume(TokenType.COMMA);
                 continue;
@@ -79,18 +152,21 @@ public class Parser {
                     continue;
                 }
             }
-
+ 
             arguments.add(parseExpression());
 
             if (matchesAny(TokenType.OPEN_PARENTHESES, TokenType.CLOSING_PARENTHESES)) {
                 break;
             }
-            consume(tknType);
+
+            consume(peek().getType());
         }
 
         consume(TokenType.CLOSING_PARENTHESES);
         return new FunctionExpression(fnType, arguments);
     }
+
+    // Range ----------------------------------------------------
 
     private RangeExpression parseRange() {
         Token left = lookBack();
@@ -101,6 +177,7 @@ public class Parser {
 
         consume(TokenType.COLON);
         consume(TokenType.CELL);
+
         return normalizeRange(leftRef, rightRef);
     }
 
@@ -133,6 +210,8 @@ public class Parser {
         return new RangeExpression(leftCell, rightCell);
     }
 
+    // Reference ----------------------------------------------------
+
     private Reference parseReference(String input) {
         if (input.matches("[0-9]+")) {
             int row = Integer.parseInt(input);
@@ -164,66 +243,39 @@ public class Parser {
         int result = 0;
 
         for (char c : col.toUpperCase().toCharArray()) {
-            result *= 26 + (c - 'A' + 1);
+            result = result * 26 + (c - 'A' + 1);
         }
-        return result;
+
+        return result - 1;
     }
 
-    private Expression parseNumber() {
+    // Literals -------------------------------------------------------
+
+    private Expression parseNumberLiteral() {
         Token token = peek();
-        TokenType type = token.getType();
-        String value = token.getValue();
-
-        if (isUnaryMathOperator(value)) {
-            parseUnary();
-        }
-
-        return null;
+        consume(TokenType.NUMBER);
+        return new NumberLiteral(Double.parseDouble(token.getValue()));
     }
 
-    private UnaryExpression parseUnary() {
-        Token operator = peek();
+    private Expression parseStringLiteral() {
+        Token token = peek();
 
-        consume(TokenType.MATH_OPERATOR);
-
-        if (!matchesAny(TokenType.NUMBER, TokenType.IDENTIFIER, TokenType.CELL)) {
-            throw new ParseException(
-                    "Invalid token type " + peek().getType() + " after MATH_OPERATOR " + operator.getValue());
+        if (token.getType().equals(TokenType.STRING)) {
+            consume(TokenType.STRING);
+        } else {
+            consume(TokenType.EMPTY_STRING);
         }
 
-        Expression right = parseExpression();
-        return new UnaryExpression(operator, right);
+        return new StringLiteral(token.getValue());
     }
 
-    private PostfixExpression parsePostfix() {
-        return null;
-    }
-
-    private boolean isUnaryMathOperator(String operator) {
-        if (!operator.equals("+") || !operator.equals("-")) {
-            return false;
-        }
-
-        Token left = lookBack();
-        Token right = lookAhead();
-
-        if (left.getType().equals(TokenType.OPEN_PARENTHESES)) {
-            return true;
-        }
-
-        if (left.getType().matches(TokenType.NUMBER, TokenType.CELL, TokenType.IDENTIFIER)) {
-            return false;
-        }
-
-        if (!right.getType().matches(TokenType.NUMBER, TokenType.CELL, TokenType.IDENTIFIER)) {
-            return false;
-        }
-
-        return true;
-    }
+    // Parser helpers -----------------------------------------------------
 
     // looks at current token
     private Token peek() {
+        if (this.currIdx >= this.tokens.size()) {
+            return new Token("", TokenType.EOF);
+        }
         return this.tokens.get(this.currIdx);
     }
 
@@ -239,15 +291,8 @@ public class Parser {
         this.currIdx++;
     }
 
-    private boolean match(TokenType expected) {
-        Token current = peek();
-        TokenType currentType = current.getType();
-
-        return currentType.equals(expected);
-    }
-
     private boolean isAtEnd() {
-        return this.currIdx == tokens.size() - 1;
+        return this.currIdx >= tokens.size() - 1;
     }
 
     private Token lookAhead() {
@@ -264,8 +309,28 @@ public class Parser {
         return this.tokens.get(this.currIdx - 1);
     }
 
+    private boolean match(TokenType expected) {
+        Token current = peek();
+        TokenType currentType = current.getType();
+
+        return currentType.equals(expected);
+    }
+
+    private boolean matchMathOperator(String operator) {
+        return match(TokenType.MATH_OPERATOR) && peek().getValue().equals(operator);
+    }
+
+    private boolean matchPostFixOperator() {
+        return match(TokenType.PERCENTAGE_OPERATOR) && peek().getValue().equals("%");
+    }
+
     private boolean matchesAny(TokenType... types) {
         return Arrays.asList(types).stream().anyMatch(tokenType -> match(tokenType));
     }
 
+    public void printExpressionLog(Expression e) {
+        IO.println("Parser Result:");
+        IO.println(e.toString());
+        IO.println("-------------------------------");
+    }
 }

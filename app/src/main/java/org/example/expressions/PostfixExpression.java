@@ -19,4 +19,9 @@ public class PostfixExpression implements Expression {
         return this.left;
     }
 
+    @Override
+    public String toString() {
+        return this.left + operator.getValue();
+    }
+
 }

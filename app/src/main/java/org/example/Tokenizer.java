@@ -53,6 +53,7 @@ public class Tokenizer {
             case '*' -> token.fillToken("*", TokenType.MATH_OPERATOR);
             case '/' -> token.fillToken("/", TokenType.MATH_OPERATOR);
             case '^' -> token.fillToken("^", TokenType.MATH_OPERATOR);
+            case '%' -> token.fillToken("%", TokenType.PERCENTAGE_OPERATOR);
             case '<' -> {
                 if (this.idx + 1 < this.formula.length() && this.formula.charAt(this.idx + 1) == '=') {
                     token.fillToken("<=", TokenType.COMPARISON_OPERATOR);
@@ -136,8 +137,6 @@ public class Tokenizer {
     }
 
     private TokenType classify(String string, boolean startedWithQuote, boolean endedWithQuote) {
-        TokenType type;
-
         final Pattern identifier = Pattern.compile("[A-Za-z]+", Pattern.CASE_INSENSITIVE);
         final Matcher matcherIdentifier = identifier.matcher(string);
         final Pattern cell = Pattern.compile("[A-Za-z][0-9]+", Pattern.CASE_INSENSITIVE);
@@ -146,24 +145,31 @@ public class Tokenizer {
                 Pattern.CASE_INSENSITIVE);
         final Matcher matcherNumber = number.matcher(string);
 
-        if (matcherIdentifier.matches()) {
-            type = TokenType.IDENTIFIER;
-        } else if (matcherCell.matches()) {
-            type = TokenType.CELL;
-        } else if (matcherNumber.matches()) {
-            type = TokenType.NUMBER;
-        } else if (startedWithQuote && endedWithQuote && string.length() == 0) {
-            type = TokenType.EMPTY_STRING;
-        } else if (startedWithQuote && !endedWithQuote) {
-            type = TokenType.ERROR_UNTERMINATED_STRING;
-        } else {
-            type = TokenType.STRING;
+        if (startedWithQuote) {
+            if (!endedWithQuote) {
+                return TokenType.ERROR_UNTERMINATED_STRING;
+            }
+
+            if (string.isEmpty()) {
+                return TokenType.EMPTY_STRING;
+            }
+
+            return TokenType.STRING;
         }
-        return type;
+
+        if (matcherIdentifier.matches()) {
+            return TokenType.IDENTIFIER;
+        } else if (matcherCell.matches()) {
+            return TokenType.CELL;
+        } else if (matcherNumber.matches()) {
+            return TokenType.NUMBER;
+        }
+
+        return TokenType.STRING;
     }
 
-    public void printTokenList(List<Token> list) {
-        IO.println("Tokenize Result: ");
+    public void printTokenList(List<Token> list) { 
+        IO.println("Tokenizer Result: ");
         for (Token tok : list) {
             IO.println(tok.toString());
         }

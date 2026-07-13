@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
+import org.example.expressions.Expression;
 
 public class Lightcel {
     private final CsvReader csvr;
@@ -29,38 +30,64 @@ public class Lightcel {
     }
 
     public void start(String[] args) {
-        // System.out.println(System.getProperty("user.dir"));
-
-        if (args.length == 0 || args.length > 2) {
-            IO.println("usage: lightcel [-v | --version] [-h | --help] <command> [<args>]\n");
+        if (args.length == 0) {
+            IO.println("usage: lightcel [-v | --version] [-h | --help] <command> [<args>]");
             return;
         }
 
-        if (args[0].equals("-v") || args[0].equals("--version")) {
-            IO.println("lightcel version " + VERSION);
+        if (args.length > 2) {
+            IO.println("usage: lightcel [-v | --version] [-h | --help] <command> [<args>]");
             return;
         }
 
-        if (args[0].equals("-h") || args[0].equals("--help")) {
-            IO.println("usage: lightcel [-v | --version] [-h | --help]  <command> [<args>]\n");
-            IO.println("How to use Lightcel:\n");
-            IO.println("commands");
-            IO.println("   parse   takes input.csv and produces output.csv with excel functionality");
-            return;
-        }
+        switch (args[0]) {
+            case "-v", "--version" -> {
+                IO.println("lightcel version " + VERSION);
+            }
 
-        if (args[0].equals("parse") && (args[1].equals("-h") || args[1].equals("--help"))) {
-            IO.println("usage: lightcel parse [<arg.csv>]\n");
-            return;
-        }
+            case "-h", "--help" -> {
+                IO.println("usage: lightcel [-v | --version] [-h | --help] <command> [<args>]\n");
+                IO.println("How to use Lightcel:\n");
+                IO.println("commands");
+                IO.println("   parse   takes input.csv and produces output.csv with excel functionality");
+            }
 
-        if (args[0].equals("parse") && args[1].endsWith(".csv")) {
-            String inputFile = args[1];
-            csvr.importCsv(inputFile);
-            printTable();
-            createOutputFile();
-        } else {
-            IO.println("lightcel: '" + args[0] + "' is not a lightcel command. See 'lightcel --help'.");
+            case "parse" -> {
+                if (args.length == 1) {
+                    IO.println("usage: lightcel parse <input.csv>");
+                    return;
+                }
+
+                if (args[1].equals("-h") || args[1].equals("--help")) {
+                    IO.println("usage: lightcel parse <input.csv>");
+                    return;
+                }
+
+                if (!args[1].toLowerCase().endsWith(".csv")) {
+                    IO.println("lightcel: '" + args[1] + "' is not a CSV file. See 'lightcel --help'.");
+                    return;
+                }
+
+                Path path = Path.of(args[1]);
+
+                if (!Files.exists(path)) {
+                    IO.println("lightcel: file '" + args[1] + "' does not exist.");
+                    return;
+                }
+
+                if (!Files.isRegularFile(path)) {
+                    IO.println("lightcel: '" + args[1] + "' is not a regular file.");
+                    return;
+                }
+
+                csvr.importCsv(args[1]);
+                printTable();
+                createOutputFile();
+            }
+
+            default -> {
+                IO.println("lightcel: '" + args[0] + "' is not a lightcel command. See 'lightcel --help'.");
+            }
         }
     }
 
@@ -87,10 +114,12 @@ public class Lightcel {
                             }
                             case STRING, NUMBER -> line += value + ",";
                             case FORMULA -> {
-                                line += value + ",";
                                 List<Token> tokens = tokenizer.tokenize(value);
                                 tokenizer.printTokenList(tokens);
-                                parser.parse(tokens);
+                                Expression expr = parser.parse(tokens);
+                                parser.printExpressionLog(expr);
+                                String eval = evaluator.evaluate(expr);
+                                line += eval + ",";
                             }
                         }
                     }
@@ -120,6 +149,6 @@ public class Lightcel {
             }
         }
 
-        IO.println("-------------------------------");
+        IO.println("\n-------------------------------");
     }
 }
