@@ -12,7 +12,7 @@ import org.example.Tokenizer;
  */
 void main(String[] args) {
     Lightcel lightcel = initializeLightcel();
-    lightcel.start(args); 
+    lightcel.start(args);
 }
 
 /**
@@ -24,6 +24,6 @@ Lightcel initializeLightcel() {
     CsvReader csvr = new CsvReader(table);
     Tokenizer tokenizer = new Tokenizer();
     Parser parser = new Parser(table);
-    Evaluator evaluator = new Evaluator();
+    Evaluator evaluator = new Evaluator(table);
     return new Lightcel(csvr, table, tokenizer, parser, evaluator);
 }

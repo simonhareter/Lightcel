@@ -168,7 +168,7 @@ public class Tokenizer {
         return TokenType.STRING;
     }
 
-    public void printTokenList(List<Token> list) { 
+    public void printTokenList(List<Token> list) {
         IO.println("Tokenizer Result: ");
         for (Token tok : list) {
             IO.println(tok.toString());

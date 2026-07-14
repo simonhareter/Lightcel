@@ -118,7 +118,7 @@ public class Lightcel {
                                 tokenizer.printTokenList(tokens);
                                 Expression expr = parser.parse(tokens);
                                 parser.printExpressionLog(expr);
-                                String eval = evaluator.evaluate(expr);
+                                Object eval = evaluator.evaluate(expr);
                                 line += eval + ",";
                             }
                         }

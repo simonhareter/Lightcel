@@ -13,4 +13,12 @@ public class RangeExpression implements Expression {
     public String toString() {
         return "( " + this.start + " : " + this.end + " )";
     }
+
+	public Reference getStart() {
+		return start;
+	}
+
+	public Reference getEnd() {
+		return end;
+	}
 }

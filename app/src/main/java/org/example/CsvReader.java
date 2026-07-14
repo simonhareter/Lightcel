@@ -14,7 +14,7 @@ public class CsvReader {
         this.table = table;
     }
 
-    void importCsv(String inputFile) {
+    public void importCsv(String inputFile) {
         Path fp = Paths.get(inputFile).toAbsolutePath().normalize();
         IO.println("Parsing input.csv...\n");
         try (BufferedReader br = Files.newBufferedReader(fp)) {

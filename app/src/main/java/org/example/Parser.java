@@ -61,6 +61,10 @@ public class Parser {
             Token operator = peek();
 
             if (operator.getType().equals(TokenType.CONCATENATION_OPERATOR)) {
+                if (!lookAhead().getType().matches(TokenType.STRING, TokenType.EMPTY_STRING)) {
+                    throw new ParseException(
+                            "Can't concatenate " + lookBack().getType() + " and " + lookAhead().getType());
+                }
                 consume(TokenType.CONCATENATION_OPERATOR);
             } else {
                 consume(TokenType.MATH_OPERATOR);
@@ -117,7 +121,10 @@ public class Parser {
 
         return switch (token.getType()) {
             case IDENTIFIER -> parseFunction();
-            case CELL -> parseReference(token.getValue());
+            case CELL -> {
+                consume(TokenType.CELL);
+                yield parseReference(token.getValue());
+            }
             case COLON -> parseRange();
             case NUMBER -> parseNumberLiteral();
             case STRING, EMPTY_STRING -> parseStringLiteral();
@@ -152,7 +159,7 @@ public class Parser {
                     continue;
                 }
             }
- 
+
             arguments.add(parseExpression());
 
             if (matchesAny(TokenType.OPEN_PARENTHESES, TokenType.CLOSING_PARENTHESES)) {
