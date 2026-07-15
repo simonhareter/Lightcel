@@ -1,5 +1,7 @@
 package org.example.util;
 
-public record Range(Object start, Object end) {
+import org.example.expressions.CellReference;
+
+public record Range(CellReference start, CellReference end) {
 
 }

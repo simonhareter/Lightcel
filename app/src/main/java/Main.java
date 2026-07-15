@@ -24,6 +24,6 @@ Lightcel initializeLightcel() {
     CsvReader csvr = new CsvReader(table);
     Tokenizer tokenizer = new Tokenizer();
     Parser parser = new Parser(table);
-    Evaluator evaluator = new Evaluator(table);
+    Evaluator evaluator = new Evaluator(table, tokenizer, parser);
     return new Lightcel(csvr, table, tokenizer, parser, evaluator);
 }

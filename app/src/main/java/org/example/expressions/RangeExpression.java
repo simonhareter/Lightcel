@@ -14,11 +14,11 @@ public class RangeExpression implements Expression {
         return "( " + this.start + " : " + this.end + " )";
     }
 
-	public Reference getStart() {
-		return start;
-	}
+    public Reference getStart() {
+        return start;
+    }
 
-	public Reference getEnd() {
-		return end;
-	}
+    public Reference getEnd() {
+        return end;
+    }
 }

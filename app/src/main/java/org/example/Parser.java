@@ -127,8 +127,9 @@ public class Parser {
             }
             case COLON -> parseRange();
             case NUMBER -> parseNumberLiteral();
+            case OPEN_PARENTHESES -> parseParentheses();
             case STRING, EMPTY_STRING -> parseStringLiteral();
-            default -> throw new ParseException("Unexpected token");
+            default -> throw new ParseException("Unexpected token " + token.getType());
         };
     }
 
@@ -254,6 +255,14 @@ public class Parser {
         }
 
         return result - 1;
+    }
+
+    private Expression parseParentheses() {
+        consume(TokenType.OPEN_PARENTHESES);
+        Expression expr = parseExpression();
+        consume(TokenType.CLOSING_PARENTHESES);
+
+        return expr;
     }
 
     // Literals -------------------------------------------------------

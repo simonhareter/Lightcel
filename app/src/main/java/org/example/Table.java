@@ -1,5 +1,8 @@
 package org.example;
 
+import java.util.ArrayList;
+import java.util.List;
+import org.example.expressions.CellReference;
 import org.example.util.exceptions.InvalidReferenceException;
 import org.example.util.exceptions.TableFullException;
 
@@ -50,6 +53,24 @@ public class Table {
 
     public Cell getCell(int row, int col) {
         return cells[row][col];
+    }
+
+    public List<Cell> getRange(CellReference start, CellReference end) {
+        List<Cell> cells = new ArrayList<>();
+
+        for (int row = start.getRow(); row <= end.getRow(); row++) {
+            for (int col = start.getColumn(); col <= end.getColumn(); col++) {
+                Cell cell = this.getCell(row, col);
+                if (cell == null) {
+                    continue;
+                }
+
+                if (cell.getCellType().equals(CellType.NUMBER) || cell.getCellType().equals(CellType.FORMULA)) {
+                    cells.add(this.getCell(row, col));
+                }
+            }
+        }
+        return cells;
     }
 
     public void setMaxInsertedRow(int newMaxRow) {

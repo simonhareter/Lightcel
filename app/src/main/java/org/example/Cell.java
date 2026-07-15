@@ -2,6 +2,7 @@ package org.example;
 
 public class Cell {
     private Object value;
+    private Object evaluatedValue;
     private CellType type;
 
     public Cell(Object value, CellType type) {
@@ -18,6 +19,26 @@ public class Cell {
     }
 
     public CellType getCellType() {
+        return type;
+    }
+
+    public Object getEvaluatedValue() {
+        return evaluatedValue;
+    }
+
+    public void setValue(Object value) {
+		this.value = value;
+	}
+
+	public void setEvaluatedValue(Object evaluatedValue) {
+		this.evaluatedValue = evaluatedValue;
+	}
+
+	public void setType(CellType type) {
+		this.type = type;
+	}
+
+	public CellType getType() {
         return type;
     }
 
