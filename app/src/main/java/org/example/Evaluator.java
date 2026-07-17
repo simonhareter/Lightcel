@@ -16,8 +16,12 @@ import org.example.expressions.Reference;
 import org.example.expressions.RowReference;
 import org.example.expressions.StringLiteral;
 import org.example.expressions.UnaryExpression;
+import org.example.util.ErrorValue;
 import org.example.util.FunctionType;
-import org.example.util.Range;
+import org.example.util.NumberValue;
+import org.example.util.RangeValue;
+import org.example.util.StringValue;
+import org.example.util.Value;
 import org.example.util.exceptions.EvaluationException;
 
 public class Evaluator {
@@ -33,23 +37,30 @@ public class Evaluator {
         this.parser = parser;
     }
 
-    public Object evaluate(Expression expr) {
+    public Value evaluate(Expression expr, Cell source) {
         return switch (expr) {
             case BinaryExpression be -> {
                 Expression leftExpr = be.getLeft();
                 Expression rightExpr = be.getRight();
                 String operator = be.getOperator().getValue();
 
-                Object left = evaluate(leftExpr);
-                Object right = evaluate(rightExpr);
+                Value left = evaluate(leftExpr, source);
+                Value right = evaluate(rightExpr, source);
+
+                if (left instanceof ErrorValue) {
+                    yield left;
+                }
+
+                if (right instanceof ErrorValue) {
+                    yield right;
+                }
 
                 yield switch (operator) {
-                    case "+" -> (double) left + (double) right;
-                    case "-" -> (double) left - (double) right;
-                    case "*" -> (double) left * (double) right;
-                    case "/" -> (double) left / (double) right;
-                    case "&" -> (String) left + (String) right;
-                    case "^" -> Math.pow((double) left, (double) right);
+                    case "+", "&" -> add(left, right);
+                    case "-" -> subtract(left, right);
+                    case "*" -> multiply(left, right);
+                    case "/" -> divide(left, right);
+                    case "^" -> pow(left, right);
                     default -> {
                         throw new EvaluationException("Unexpected operator for binary expression " + operator);
                     }
@@ -59,10 +70,10 @@ public class Evaluator {
                 String operator = ue.getOperator().getValue();
                 Expression rightExpr = ue.getRight();
 
-                double right = (double) evaluate(rightExpr);
+                Value right = evaluate(rightExpr, source);
 
                 yield switch (operator) {
-                    case "-" -> -right;
+                    case "-" -> negate(right);
                     case "+" -> right;
                     default -> throw new EvaluationException("Unexpected unary operator " + operator);
                 };
@@ -71,11 +82,17 @@ public class Evaluator {
                 Expression leftExpr = pe.getLeft();
                 String operator = pe.getOperator().getValue();
 
-                double left = (double) evaluate(leftExpr);
+                Value left = evaluate(leftExpr, source);
+
+                double percent = 100;
+                NumberValue denominator = new NumberValue(percent);
 
                 if (operator.equals("%")) {
-                    yield left / 100;
-                } else {
+
+                    yield divide(left, denominator);
+                } else
+
+                {
                     throw new EvaluationException("Unexpected operator " + operator);
                 }
             }
@@ -83,17 +100,46 @@ public class Evaluator {
                 FunctionType funcType = fe.getFunction();
                 List<Expression> arguments = fe.getArguments();
 
-                List<Object> values = new ArrayList<>();
+                List<NumberValue> values = new ArrayList<>();
 
                 for (int i = 0; i < arguments.size(); i++) {
-                    Object result = evaluate(arguments.get(i));
+                    Value result = evaluate(arguments.get(i), source);
 
-                    if (result instanceof Range range) {
-                        for (Cell cell : table.getRange(range.start(), range.end())) {
-                            values.add(evaluateCell(cell));
+                    switch (result) {
+                        case StringValue _ -> {
+                            NumberValue zero = new NumberValue(0);
+                            values.add(zero);
                         }
-                    } else {
-                        values.add(result);
+                        case ErrorValue err -> {
+                            yield err;
+                        }
+                        case NumberValue num -> values.add(num);
+                        case RangeValue range -> {
+                            for (Cell cell : table.getRange(range.start(), range.end())) {
+                                Value evalValue = evaluateCell(cell, source);
+
+                                switch (evalValue) {
+                                    case StringValue _ -> {
+                                        continue;
+                                    }
+                                    case ErrorValue err -> {
+                                        if (source.equals(cell)) {
+                                            yield err;
+                                        }
+
+                                        if (funcType.equals(FunctionType.COUNT)) {
+                                            continue;
+                                        }
+
+                                        yield err;
+                                    }
+                                    case NumberValue num -> values.add(num);
+                                    default -> {
+                                        // skip others
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -113,127 +159,154 @@ public class Evaluator {
                 Reference endRef = re.getEnd();
 
                 if (startRef instanceof CellReference refS && endRef instanceof CellReference refE) {
-                    yield new Range(refS, refE);
+                    yield new RangeValue(refS, refE);
                 }
 
                 throw new EvaluationException("Range does not consist of 2 Reference types start and end");
             }
             case CellReference cr -> {
                 Cell cell = table.getCell(cr.getRow(), cr.getColumn());
-                yield evaluateCell(cell);
+
+                yield evaluateCell(cell, source);
             }
-            case RowReference rowR -> rowR.getRow();
-            case ColumnReference colR -> colR.getColumn();
-            case NumberLiteral nl -> nl.getValue();
-            case StringLiteral sl -> sl.getValue();
+            case RowReference rowR -> new NumberValue(rowR.getRow());
+            case ColumnReference colR -> new NumberValue(colR.getColumn());
+            case NumberLiteral nl -> new NumberValue(nl.getValue());
+            case StringLiteral sl -> new StringValue(sl.getValue());
             default -> {
                 throw new EvaluationException("Unexpected expression " + expr.toString());
             }
         };
     }
 
-    private Object evaluateCell(Cell cell) {
+    private Value evaluateCell(Cell cell, Cell source) {
+        if (evaluating.contains(cell)) {
+            return ErrorValue.REF;
+        }
+
         if (cell.getEvaluatedValue() != null) {
             return cell.getEvaluatedValue();
         }
 
-        if (evaluating.contains(cell)) {
-            Object circularRef = "#REF!";
-            return circularRef;
-        }
-
         evaluating.add(cell);
 
-        Object result;
+        Value result;
 
         if (cell.getCellType() == CellType.FORMULA) {
             List<Token> tokens = tokenizer.tokenize(cell.getValue().toString());
             Expression e = parser.parse(tokens);
-            result = evaluate(e);
+            result = evaluate(e, source);
         } else {
-            result = cell.getValue();
+            result = convertValue(cell.getValue());
         }
 
         evaluating.remove(cell);
-
         cell.setEvaluatedValue(result);
         return result;
     }
 
-    private double sum(List<Object> values) {
+    private Value convertValue(Object value) {
+        if (value instanceof Double d) {
+            return new NumberValue(d);
+        }
+
+        if (value instanceof String s) {
+            return new StringValue(s);
+        }
+
+        return ErrorValue.VALUE;
+    }
+
+    private Value add(Value left, Value right) {
+        if (left instanceof NumberValue l && right instanceof NumberValue r) {
+            return new NumberValue(l.value() + r.value());
+        }
+
+        if (left instanceof StringValue l && right instanceof StringValue r) {
+            return new StringValue(l.value() + r.value());
+        }
+
+        return ErrorValue.VALUE;
+    }
+
+    private Value subtract(Value left, Value right) {
+        if (left instanceof NumberValue l && right instanceof NumberValue r) {
+            return new NumberValue(l.value() - r.value());
+        }
+
+        return ErrorValue.VALUE;
+    }
+
+    private Value multiply(Value left, Value right) {
+        if (left instanceof NumberValue l && right instanceof NumberValue r) {
+            return new NumberValue(l.value() * r.value());
+        }
+
+        return ErrorValue.VALUE;
+    }
+
+    private Value divide(Value left, Value right) {
+        if (left instanceof NumberValue l && right instanceof NumberValue r) {
+            return new NumberValue(l.value() / r.value());
+        }
+
+        return ErrorValue.VALUE;
+    }
+
+    private Value pow(Value left, Value right) {
+        if (left instanceof NumberValue l && right instanceof NumberValue r) {
+            return new NumberValue(Math.pow(l.value(), r.value()));
+        }
+
+        return ErrorValue.VALUE;
+    }
+
+    private Value negate(Value right) {
+        if (right instanceof NumberValue r) {
+            return new NumberValue(-r.value());
+        }
+
+        return ErrorValue.VALUE;
+    }
+
+    private NumberValue sum(List<NumberValue> values) {
         double sum = 0;
-        for (Object value : values) {
-            if (value instanceof Range range) {
-                for (Cell cell : table.getRange(range.start(), range.end())) {
-                    Object evaluatedValue = cell.getEvaluatedValue();
+        for (NumberValue value : values) {
+            sum += value.value();
+        }
+        return new NumberValue(sum);
+    }
 
-                    if (evaluatedValue == null) {
-                        evaluatedValue = this.evaluateCell(cell);
-                    }
+    private Value average(List<NumberValue> values) {
+        NumberValue sum = sum(values);
+        return new NumberValue(sum.value() / values.size());
+    }
 
-                    sum += (double) evaluatedValue;
-                }
-            } else {
-                sum += (double) value;
+    private NumberValue min(List<NumberValue> values) {
+        double min = values.getFirst().value();
+
+        for (NumberValue value : values) {
+            if (value.value() < min) {
+                min = value.value();
             }
         }
-        return sum;
+        return new NumberValue(min);
     }
 
-    private double average(List<Object> values) {
-        return sum(values) / values.size();
-    }
+    private Value max(List<NumberValue> values) {
+        double max = values.getFirst().value();
 
-    private double min(List<Object> values) {
-        double min = (double) values.getFirst();
-        for (Object value : values) {
-            if (value instanceof Range range) {
-                for (Cell cell : table.getRange(range.start(), range.end())) {
-                    Object evaluatedValue = cell.getEvaluatedValue();
-
-                    if (evaluatedValue == null) {
-                        evaluatedValue = this.evaluateCell(cell);
-                    }
-
-                    if ((double) evaluatedValue < min) {
-                        min = (double) evaluatedValue;
-                    }
-                }
-            } else {
-                if ((double) value < min) {
-                    min = (double) value;
-                }
+        for (NumberValue value : values) {
+            if (value.value() > max) {
+                max = value.value();
             }
         }
-        return min;
+
+        return new NumberValue(max);
     }
 
-    private double max(List<Object> values) {
-        double max = (double) values.getFirst();
-        for (Object value : values) {
-            if (value instanceof Range range) {
-                for (Cell cell : table.getRange(range.start(), range.end())) {
-                    Object evaluatedValue = cell.getEvaluatedValue();
-
-                    if (evaluatedValue == null) {
-                        evaluatedValue = this.evaluateCell(cell);
-                    }
-
-                    if ((double) evaluatedValue > max) {
-                        max = (double) evaluatedValue;
-                    }
-                }
-            } else {
-                if ((double) value > max) {
-                    max = (double) value;
-                }
-            }
-        }
-        return max;
-    }
-
-    private double count(List<Object> values) {
-        return values.size();
+    private NumberValue count(List<NumberValue> values) {
+        return new NumberValue(values.size());
     }
 
 }

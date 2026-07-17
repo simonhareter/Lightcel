@@ -1,8 +1,10 @@
 package org.example;
 
+import org.example.util.Value;
+
 public class Cell {
     private Object value;
-    private Object evaluatedValue;
+    private Value evaluatedValue;
     private CellType type;
 
     public Cell(Object value, CellType type) {
@@ -22,24 +24,29 @@ public class Cell {
         return type;
     }
 
-    public Object getEvaluatedValue() {
+    public Value getEvaluatedValue() {
         return evaluatedValue;
     }
 
     public void setValue(Object value) {
-		this.value = value;
-	}
+        this.value = value;
+    }
 
-	public void setEvaluatedValue(Object evaluatedValue) {
-		this.evaluatedValue = evaluatedValue;
-	}
+    public void setEvaluatedValue(Value evaluatedValue) {
+        this.evaluatedValue = evaluatedValue;
+    }
 
-	public void setType(CellType type) {
-		this.type = type;
-	}
+    public void setType(CellType type) {
+        this.type = type;
+    }
 
-	public CellType getType() {
+    public CellType getType() {
         return type;
+    }
+
+    @Override
+    public String toString() {
+        return "" + this.value;
     }
 
 }

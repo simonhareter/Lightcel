@@ -11,6 +11,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import org.example.expressions.Expression;
+import org.example.util.Value;
 
 public class Lightcel {
     private final CsvReader csvr;
@@ -118,7 +119,7 @@ public class Lightcel {
                                 tokenizer.printTokenList(tokens);
                                 Expression expr = parser.parse(tokens);
                                 parser.printExpressionLog(expr);
-                                Object eval = evaluator.evaluate(expr);
+                                Value eval = evaluator.evaluate(expr, cell);
                                 line += eval + ",";
                             }
                         }
