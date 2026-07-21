@@ -11,6 +11,11 @@ A mini excel engine that takes .csv input and outputs .csv with expected excel b
 
 https://github.com/user-attachments/assets/4390eb32-7bde-41cd-b6e2-f4c9751817f0
 
+## Dependencies
+ - Java SDK 25+
+ - Gradle will be installed if missing via the Gradle Wrapper
+ - Git
+
 ## Build from source
 
 ### 1. Clone the repository
