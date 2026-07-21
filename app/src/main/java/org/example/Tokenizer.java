@@ -36,7 +36,6 @@ public class Tokenizer {
         char c = this.formula.charAt(this.idx);
 
         switch (c) {
-            // Delimiters ,:() and MATH_OPERATORS +-*/
             case '=' -> {
                 if (this.idx != 0) {
                     token.fillToken("=", TokenType.EQUALS);
